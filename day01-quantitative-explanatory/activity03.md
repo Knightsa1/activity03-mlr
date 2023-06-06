@@ -32,7 +32,7 @@ library(tidymodels)
     ## ✖ dplyr::lag()      masks stats::lag()
     ## ✖ yardstick::spec() masks readr::spec()
     ## ✖ recipes::step()   masks stats::step()
-    ## • Use tidymodels_prefer() to resolve common conflicts.
+    ## • Use suppressPackageStartupMessages() to eliminate package startup messages
 
 ``` r
 library(GGally)
@@ -359,28 +359,103 @@ music <- rbind(music_50s, music_60s, music_70s, music_80s, music_90s, music_00s,
 
 ``` r
   mlr_mod <- lm_spec %>% 
-  fit(pop ~ bpm + nrgy + dnce + dB + live + val + dur + acous +spch,
-      data = music)
+  fit(pop ~ nrgy + dB, data = music)
 
   tidy(mlr_mod)
 ```
 
-    ## # A tibble: 10 × 5
-    ##    term        estimate std.error statistic  p.value
-    ##    <chr>          <dbl>     <dbl>     <dbl>    <dbl>
-    ##  1 (Intercept)  68.1      4.86       14.0   3.09e-39
-    ##  2 bpm           0.0197   0.0181      1.09  2.78e- 1
-    ##  3 nrgy         -0.0949   0.0373     -2.54  1.12e- 2
-    ##  4 dnce          0.142    0.0365      3.89  1.10e- 4
-    ##  5 dB            0.965    0.179       5.40  9.52e- 8
-    ##  6 live         -0.0290   0.0311     -0.934 3.51e- 1
-    ##  7 val          -0.113    0.0231     -4.89  1.26e- 6
-    ##  8 dur           0.0403   0.00774     5.20  2.61e- 7
-    ##  9 acous        -0.165    0.0217     -7.60  9.98e-14
-    ## 10 spch          0.176    0.0734      2.40  1.68e- 2
+    ## # A tibble: 3 × 5
+    ##   term        estimate std.error statistic  p.value
+    ##   <chr>          <dbl>     <dbl>     <dbl>    <dbl>
+    ## 1 (Intercept)  73.0       3.33      21.9   1.24e-80
+    ## 2 nrgy          0.0190    0.0321     0.593 5.53e- 1
+    ## 3 dB            1.29      0.190      6.78  2.69e-11
 
 ![
-\\hat{y} = 68.144 +  0.020 \\times bpm - 0.095 \\times nrgy + 0.142 \\times dnce + 0.965 \\times dB - 0.029 \\times live - 0.113 \\times val + 0.40 \\times dur - 0.165 \\times acous + 0.176 \\times spch
-](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;%0A%5Chat%7By%7D%20%3D%2068.144%20%2B%20%200.020%20%5Ctimes%20bpm%20-%200.095%20%5Ctimes%20nrgy%20%2B%200.142%20%5Ctimes%20dnce%20%2B%200.965%20%5Ctimes%20dB%20-%200.029%20%5Ctimes%20live%20-%200.113%20%5Ctimes%20val%20%2B%200.40%20%5Ctimes%20dur%20-%200.165%20%5Ctimes%20acous%20%2B%200.176%20%5Ctimes%20spch%0A "
-\hat{y} = 68.144 +  0.020 \times bpm - 0.095 \times nrgy + 0.142 \times dnce + 0.965 \times dB - 0.029 \times live - 0.113 \times val + 0.40 \times dur - 0.165 \times acous + 0.176 \times spch
+\\hat{y} = 72.963 +  0.019 \\times nrgy + 1.29 \\times dB
+](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;%0A%5Chat%7By%7D%20%3D%2072.963%20%2B%20%200.019%20%5Ctimes%20nrgy%20%2B%201.29%20%5Ctimes%20dB%0A "
+\hat{y} = 72.963 +  0.019 \times nrgy + 1.29 \times dB
+")
+
+``` r
+music$top.genre <- gsub(".*aus.*|.*brit.*|.*canad.*|.*irish.*|.*italian.*|.*uk.*|.*euro.*|.*german.*|.*merseybeat.*|.*yodeling.*|.*chanson.*|.*belgian.*|.*celtic.*|.*latin.*|.*afro.*|.*bubblegum.*|.*trance.*","international",music$top.genre)
+```
+
+``` r
+music$top.genre <- gsub(".*pop.*|.*adult standards.*|.*beach.*|.*hollywood.*|.*boy band.*","pop",music$top.genre)
+```
+
+``` r
+music$top.genre <- gsub(".*rock.*|.*metal.*|.*mellow gold.*|.*punk.*|.*permanent wave.*","rock",music$top.genre)
+```
+
+``` r
+music$top.genre <- gsub(".*hip-hop.*|.*hip hop.*|.*doo-wop.*|.*soul.*|.*blues.*|.*girl.*|.*bebop.*|.*boogaloo.*|.*jazz.*|.*disco.*|.*r&b.*|.*hi-nrg.*|.*funk.*|.*neo.*|.*house.*|.*big.*|.*rap.*|.*brostep.*|.*complextro.*|.*edm.*", "rock",music$top.genre)
+```
+
+``` r
+music$top.genre <- gsub(".*country.*|.*folk.*|.*western.*|.*american.*","country",music$top.genre)
+```
+
+``` r
+music$international <- ifelse(music$top.genre == 'international', 1, 0)
+music$domestic <- ifelse(music$top.genre != 'international', 1, 0)
+```
+
+``` r
+  # review any visual patterns
+music%>% 
+  select(pop, dB, nrgy, international) %>% 
+  ggpairs()
+```
+
+![](activity03_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+
+``` r
+#fit the mlr model
+lm_spec <- linear_reg() %>%
+set_mode("regression") %>%
+set_engine("lm")
+```
+
+``` r
+mlr_mod2 <- lm_spec %>% 
+  fit(pop ~ nrgy + dB + international, data = music)
+
+tidy(mlr_mod2)
+```
+
+    ## # A tibble: 4 × 5
+    ##   term          estimate std.error statistic  p.value
+    ##   <chr>            <dbl>     <dbl>     <dbl>    <dbl>
+    ## 1 (Intercept)    72.9       3.33      21.9   3.34e-80
+    ## 2 nrgy            0.0212    0.0325     0.653 5.14e- 1
+    ## 3 dB              1.28      0.191      6.72  3.80e-11
+    ## 4 international  -0.650     1.40      -0.465 6.42e- 1
+
+![
+\\hat{y} = 72.877 +  0.021 \\times nrgy + 1.284 \\times dB - 0.65  (if  international)
+](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;%0A%5Chat%7By%7D%20%3D%2072.877%20%2B%20%200.021%20%5Ctimes%20nrgy%20%2B%201.284%20%5Ctimes%20dB%20-%200.65%20%20%28if%20%20international%29%0A "
+\hat{y} = 72.877 +  0.021 \times nrgy + 1.284 \times dB - 0.65  (if  international)
+")
+
+``` r
+  mlr_mod3<- lm_spec %>% 
+  fit(pop ~ nrgy + dB + domestic, data = music)
+
+  tidy(mlr_mod3)
+```
+
+    ## # A tibble: 4 × 5
+    ##   term        estimate std.error statistic  p.value
+    ##   <chr>          <dbl>     <dbl>     <dbl>    <dbl>
+    ## 1 (Intercept)  72.2       3.69      19.6   8.68e-68
+    ## 2 nrgy          0.0212    0.0325     0.653 5.14e- 1
+    ## 3 dB            1.28      0.191      6.72  3.80e-11
+    ## 4 domestic      0.650     1.40       0.465 6.42e- 1
+
+![
+\\hat{y} = 72.227 +  0.021 \\times nrgy + 1.284 \\times dB + 0.65  (if  domestic)
+](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;%0A%5Chat%7By%7D%20%3D%2072.227%20%2B%20%200.021%20%5Ctimes%20nrgy%20%2B%201.284%20%5Ctimes%20dB%20%2B%200.65%20%20%28if%20%20domestic%29%0A "
+\hat{y} = 72.227 +  0.021 \times nrgy + 1.284 \times dB + 0.65  (if  domestic)
 ")

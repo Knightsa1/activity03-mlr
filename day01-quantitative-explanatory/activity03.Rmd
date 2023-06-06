@@ -265,12 +265,142 @@ music <- rbind(music_50s, music_60s, music_70s, music_80s, music_90s, music_00s,
   lm_spec
 
   mlr_mod <- lm_spec %>% 
-  fit(pop ~ bpm + nrgy + dnce + dB + live + val + dur + acous +spch,
-      data = music)
+  fit(pop ~ nrgy + dB, data = music)
 
   tidy(mlr_mod)
 ```
 
 $$
-\hat{y} = 68.144 +  0.020 \times bpm - 0.095 \times nrgy + 0.142 \times dnce + 0.965 \times dB - 0.029 \times live - 0.113 \times val + 0.40 \times dur - 0.165 \times acous + 0.176 \times spch
+\hat{y} = 72.963 +  0.019 \times nrgy + 1.29 \times dB
 $$
+
+
+```{r}
+music$top.genre <- gsub(".*aus.*|.*brit.*|.*canad.*|.*irish.*|.*italian.*|.*uk.*|.*euro.*|.*german.*|.*merseybeat.*|.*yodeling.*|.*chanson.*|.*belgian.*|.*celtic.*|.*latin.*|.*afro.*|.*bubblegum.*|.*trance.*","international",music$top.genre)
+
+```
+
+```{r}
+music$top.genre <- gsub(".*pop.*|.*adult standards.*|.*beach.*|.*hollywood.*|.*boy band.*","pop",music$top.genre)
+```
+
+```{r}
+
+music$top.genre <- gsub(".*rock.*|.*metal.*|.*mellow gold.*|.*punk.*|.*permanent wave.*","rock",music$top.genre)
+
+```
+
+```{r}
+
+music$top.genre <- gsub(".*hip-hop.*|.*hip hop.*|.*doo-wop.*|.*soul.*|.*blues.*|.*girl.*|.*bebop.*|.*boogaloo.*|.*jazz.*|.*disco.*|.*r&b.*|.*hi-nrg.*|.*funk.*|.*neo.*|.*house.*|.*big.*|.*rap.*|.*brostep.*|.*complextro.*|.*edm.*", "r&b/hip-hop",music$top.genre)
+
+```
+
+```{r}
+
+music$top.genre <- gsub(".*country.*|.*folk.*|.*western.*|.*american.*","country",music$top.genre)
+
+```
+
+
+```{r}
+
+music$international <- ifelse(music$top.genre == 'international', 1, 0)
+music$domestic <- ifelse(music$top.genre != 'international', 1, 0)
+
+```
+
+```{r}
+  # review any visual patterns
+music%>% 
+  select(pop, dB, nrgy, international) %>% 
+  ggpairs()
+```
+
+```{r}
+
+#fit the mlr model
+lm_spec <- linear_reg() %>%
+set_mode("regression") %>%
+set_engine("lm")
+
+```
+
+```{r}
+
+mlr_mod2 <- lm_spec %>% 
+  fit(pop ~ nrgy + dB + international, data = music)
+
+tidy(mlr_mod2)
+
+```
+
+$$
+\hat{y} = 72.877 +  0.021 \times nrgy + 1.284 \times dB - 0.65  (if  international)
+$$
+
+```{r}
+  mlr_mod3<- lm_spec %>% 
+  fit(pop ~ nrgy + dB + domestic, data = music)
+
+  tidy(mlr_mod3)
+```
+
+$$
+\hat{y} = 72.227 +  0.021 \times nrgy + 1.284 \times dB + 0.65  (if  domestic)
+$$
+
+The parameter for the qualitative variable means that the popularity score will be 0.65 more if the single is domestic compared to it being international holding both quantitative variables. Or the popularity score for the single will be 0.65 less if it is international compared to domestic holding both quantitative variables.
+
+```{r filtering_out_international}
+
+music_dom <- music %>% 
+  filter(top.genre != 'international')
+```
+
+```{r}
+
+music_dom$rb <- ifelse(music_dom$top.genre == 'r&b/hip-hop', 1, 0)
+music_dom$rock <- ifelse(music_dom$top.genre == 'rock', 1, 0)	
+music_dom$country <- ifelse(music_dom$top.genre == 'country', 1, 0)
+
+```
+
+
+```{r}
+  mlr_mod_rb<- lm_spec %>% 
+  fit(pop ~ nrgy + dB + rb, data = music_dom)
+
+  tidy(mlr_mod_rb)
+```
+
+$$
+\hat{y} = 70.287 +  0.033 \times nrgy + 1.17 \times dB + 2.242 \(if r&b/hip-hop)
+$$
+The intercept is 70.287 with a 0.033 increase for every unit of energy and 1.17 for every unit increase of dB. Then the quantitative variable is saying an r&b song will have 2.242 higher popularity points compared to a pop song.
+
+```{r}
+  mlr_mod_rock<- lm_spec %>% 
+  fit(pop ~ nrgy + dB + rock, data = music_dom)
+
+  tidy(mlr_mod_rock)
+```
+
+
+$$
+\hat{y} = 73.743 -  0.0001 \times nrgy + 1.4 \times dB + 5.278 \(if rock)
+$$
+
+The intercept is 73.743 with a 0.0001 decrease for every unit increase of energy and increase 1.14 for every unit increase of dB. Then the quantitative variable is saying an r&b song will have 5.278 higher popularity points compared to a pop song.
+
+```{r}
+  mlr_mod_country<- lm_spec %>% 
+  fit(pop ~ nrgy + dB + country, data = music_dom)
+
+  tidy(mlr_mod_country)
+```
+
+$$
+\hat{y} = 70.797 +  0.039 \times nrgy + 1.148 \times dB + -7.722\(if country)
+$$
+The intercept is 70.797 with a 0.039 increase for every unit increase of energy and 1.148 for every unit increase of dB. Then the quantitative variable is saying an r&b song will have 7.722 lower popularity points compared to a pop song.
