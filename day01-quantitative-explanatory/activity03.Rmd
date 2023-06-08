@@ -360,7 +360,7 @@ music_dom <- music %>%
 
 ```{r}
 
-music_dom$rb <- ifelse(music_dom$top.genre == 'r&b/hip-hop', 1, 0)
+music_dom$rb <- ifelse(music_dom$top.genre == 'r&b/hip', 1 , 0)
 music_dom$rock <- ifelse(music_dom$top.genre == 'rock', 1, 0)	
 music_dom$country <- ifelse(music_dom$top.genre == 'country', 1, 0)
 
@@ -375,7 +375,7 @@ music_dom$country <- ifelse(music_dom$top.genre == 'country', 1, 0)
 ```
 
 $$
-\hat{y} = 70.287 +  0.033 \times nrgy + 1.17 \times dB + 2.242 \(if r&b/hip-hop)
+\hat{y} = 70.287 +  0.033 \times nrgy + 1.17 \times dB + 2.242 \times r&b/hip-hop
 $$
 The intercept is 70.287 with a 0.033 increase for every unit of energy and 1.17 for every unit increase of dB. Then the quantitative variable is saying an r&b song will have 2.242 higher popularity points compared to a pop song.
 
@@ -388,7 +388,7 @@ The intercept is 70.287 with a 0.033 increase for every unit of energy and 1.17 
 
 
 $$
-\hat{y} = 73.743 -  0.0001 \times nrgy + 1.4 \times dB + 5.278 \(if rock)
+\hat{y} = 73.743 -  0.0001 \times nrgy + 1.4 \times dB + 5.278 \times rock
 $$
 
 The intercept is 73.743 with a 0.0001 decrease for every unit increase of energy and increase 1.14 for every unit increase of dB. Then the quantitative variable is saying an r&b song will have 5.278 higher popularity points compared to a pop song.
@@ -401,6 +401,93 @@ The intercept is 73.743 with a 0.0001 decrease for every unit increase of energy
 ```
 
 $$
-\hat{y} = 70.797 +  0.039 \times nrgy + 1.148 \times dB + -7.722\(if country)
+\hat{y} = 70.797 +  0.039 \times nrgy + 1.148 \times dB + -7.722\times country
 $$
 The intercept is 70.797 with a 0.039 increase for every unit increase of energy and 1.148 for every unit increase of dB. Then the quantitative variable is saying an r&b song will have 7.722 lower popularity points compared to a pop song.
+
+
+```{r}
+
+#fit the mlr model
+lm_spec <- linear_reg() %>%
+set_mode("regression") %>%
+set_engine("lm")
+
+int_mod <- lm_spec %>% 
+fit(pop ~ dB * rock, data = music_dom)
+# Another way to write this is:
+# response ~ qualitative + quantitative + qualitative * quantitative
+
+tidy(int_mod)
+
+```
+
+$$
+\hat{y} = 75.914 + 1.671 \times dB + - 5.499 \times rock + - 1.228 \times (rock \times dB)
+$$
+Because the slope for dB is higher that will have a higher value. The rock term is what brings down the popularity score.
+
+```{r}
+
+# null model
+null_mod <- lm_spec %>% 
+fit(pop ~ 1, data = music_dom)
+
+anova(
+  extract_fit_engine(int_mod),
+  extract_fit_engine(null_mod)
+)
+
+```
+
+According to this the null hypothesis is signifcant compared to the model I came up with so this not a good model to predict how popular a song will be.
+
+```{r splitting_the_data}
+
+set.seed(123)
+
+music_split <- initial_split(music_dom, 0.8)
+
+music_train <- training(music_split)
+
+music_test <- testing(music_split)
+
+```
+
+```{r}
+
+lm_spec <- linear_reg() %>% 
+  set_mode("regression") %>% 
+  set_engine("lm")
+
+```
+
+```{r interaction_model}
+
+slr_mod_inter<- lm_spec %>% 
+  fit(data = music_train, pop ~ dB * rock)
+
+tidy(slr_mod_inter)
+```
+```{r}
+
+glance(slr_mod_inter)
+
+```
+
+This accounts for around 19% of the variation. That isn't a lot however I don't think this a bad $R^2$ for a music data set.
+
+```{r pred-df}
+pred_df <- tibble::tibble(
+  dB = 0:10,
+  rock = 0:10,
+  dB_rock = 0:10
+  
+)
+```
+
+```{r augment}
+slr_aug_int <- augment(slr_mod_inter, new_data = music_test)
+
+slr_aug_int
+```

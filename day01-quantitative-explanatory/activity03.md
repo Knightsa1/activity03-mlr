@@ -32,7 +32,7 @@ library(tidymodels)
     ## ✖ dplyr::lag()      masks stats::lag()
     ## ✖ yardstick::spec() masks readr::spec()
     ## ✖ recipes::step()   masks stats::step()
-    ## • Use suppressPackageStartupMessages() to eliminate package startup messages
+    ## • Learn how to get started at https://www.tidymodels.org/start/
 
 ``` r
 library(GGally)
@@ -390,7 +390,7 @@ music$top.genre <- gsub(".*rock.*|.*metal.*|.*mellow gold.*|.*punk.*|.*permanent
 ```
 
 ``` r
-music$top.genre <- gsub(".*hip-hop.*|.*hip hop.*|.*doo-wop.*|.*soul.*|.*blues.*|.*girl.*|.*bebop.*|.*boogaloo.*|.*jazz.*|.*disco.*|.*r&b.*|.*hi-nrg.*|.*funk.*|.*neo.*|.*house.*|.*big.*|.*rap.*|.*brostep.*|.*complextro.*|.*edm.*", "rock",music$top.genre)
+music$top.genre <- gsub(".*hip-hop.*|.*hip hop.*|.*doo-wop.*|.*soul.*|.*blues.*|.*girl.*|.*bebop.*|.*boogaloo.*|.*jazz.*|.*disco.*|.*r&b.*|.*hi-nrg.*|.*funk.*|.*neo.*|.*house.*|.*big.*|.*rap.*|.*brostep.*|.*complextro.*|.*edm.*", "r&b/hip-hop",music$top.genre)
 ```
 
 ``` r
@@ -458,4 +458,125 @@ tidy(mlr_mod2)
 \\hat{y} = 72.227 +  0.021 \\times nrgy + 1.284 \\times dB + 0.65  (if  domestic)
 ](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;%0A%5Chat%7By%7D%20%3D%2072.227%20%2B%20%200.021%20%5Ctimes%20nrgy%20%2B%201.284%20%5Ctimes%20dB%20%2B%200.65%20%20%28if%20%20domestic%29%0A "
 \hat{y} = 72.227 +  0.021 \times nrgy + 1.284 \times dB + 0.65  (if  domestic)
+")
+
+The parameter for the qualitative variable means that the popularity
+score will be 0.65 more if the single is domestic compared to it being
+international holding both quantitative variables. Or the popularity
+score for the single will be 0.65 less if it is international compared
+to domestic holding both quantitative variables.
+
+``` r
+music_dom <- music %>% 
+  filter(top.genre != 'international')
+```
+
+``` r
+music_dom$rb <- ifelse(music_dom$top.genre == 'r&b/hip-hop', 1, 0)
+music_dom$rock <- ifelse(music_dom$top.genre == 'rock', 1, 0)   
+music_dom$country <- ifelse(music_dom$top.genre == 'country', 1, 0)
+```
+
+``` r
+  mlr_mod_rb<- lm_spec %>% 
+  fit(pop ~ nrgy + dB + rb, data = music_dom)
+
+  tidy(mlr_mod_rb)
+```
+
+    ## # A tibble: 4 × 5
+    ##   term        estimate std.error statistic  p.value
+    ##   <chr>          <dbl>     <dbl>     <dbl>    <dbl>
+    ## 1 (Intercept)  70.8       3.71      19.1   7.47e-63
+    ## 2 nrgy          0.0332    0.0363     0.914 3.61e- 1
+    ## 3 dB            1.17      0.209      5.59  3.55e- 8
+    ## 4 rb            2.24      1.42       1.58  1.14e- 1
+
+![
+\\hat{y} = 70.287 +  0.033 \\times nrgy + 1.17 \\times dB + 2.242 \\(if r&b/hip-hop)
+](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;%0A%5Chat%7By%7D%20%3D%2070.287%20%2B%20%200.033%20%5Ctimes%20nrgy%20%2B%201.17%20%5Ctimes%20dB%20%2B%202.242%20%5C%28if%20r%26b%2Fhip-hop%29%0A "
+\hat{y} = 70.287 +  0.033 \times nrgy + 1.17 \times dB + 2.242 \(if r&b/hip-hop)
+")
+
+The intercept is 70.287 with a 0.033 increase for every unit of energy
+and 1.17 for every unit increase of dB. Then the quantitative variable
+is saying an r&b song will have 2.242 higher popularity points compared
+to a pop song.
+
+``` r
+  mlr_mod_rock<- lm_spec %>% 
+  fit(pop ~ nrgy + dB + rock, data = music_dom)
+
+  tidy(mlr_mod_rock)
+```
+
+    ## # A tibble: 4 × 5
+    ##   term         estimate std.error statistic  p.value
+    ##   <chr>           <dbl>     <dbl>     <dbl>    <dbl>
+    ## 1 (Intercept) 73.7         3.69     20.0    1.63e-67
+    ## 2 nrgy        -0.000948    0.0368   -0.0258 9.79e- 1
+    ## 3 dB           1.40        0.211     6.64   7.34e-11
+    ## 4 rock         5.28        1.22      4.31   1.93e- 5
+
+![
+\\hat{y} = 73.743 -  0.0001 \\times nrgy + 1.4 \\times dB + 5.278 \\(if rock)
+](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;%0A%5Chat%7By%7D%20%3D%2073.743%20-%20%200.0001%20%5Ctimes%20nrgy%20%2B%201.4%20%5Ctimes%20dB%20%2B%205.278%20%5C%28if%20rock%29%0A "
+\hat{y} = 73.743 -  0.0001 \times nrgy + 1.4 \times dB + 5.278 \(if rock)
+")
+
+The intercept is 73.743 with a 0.0001 decrease for every unit increase
+of energy and increase 1.14 for every unit increase of dB. Then the
+quantitative variable is saying an r&b song will have 5.278 higher
+popularity points compared to a pop song.
+
+``` r
+  mlr_mod_country<- lm_spec %>% 
+  fit(pop ~ nrgy + dB + country, data = music_dom)
+
+  tidy(mlr_mod_country)
+```
+
+    ## # A tibble: 4 × 5
+    ##   term        estimate std.error statistic  p.value
+    ##   <chr>          <dbl>     <dbl>     <dbl>    <dbl>
+    ## 1 (Intercept)  70.8       3.71       19.1  6.02e-63
+    ## 2 nrgy          0.0385    0.0363      1.06 2.90e- 1
+    ## 3 dB            1.15      0.211       5.45 7.42e- 8
+    ## 4 country      -7.72      4.61       -1.68 9.44e- 2
+
+![
+\\hat{y} = 70.797 +  0.039 \\times nrgy + 1.148 \\times dB + -7.722\\(if country)
+](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;%0A%5Chat%7By%7D%20%3D%2070.797%20%2B%20%200.039%20%5Ctimes%20nrgy%20%2B%201.148%20%5Ctimes%20dB%20%2B%20-7.722%5C%28if%20country%29%0A "
+\hat{y} = 70.797 +  0.039 \times nrgy + 1.148 \times dB + -7.722\(if country)
+")
+
+The intercept is 70.797 with a 0.039 increase for every unit increase of
+energy and 1.148 for every unit increase of dB. Then the quantitative
+variable is saying an r&b song will have 7.722 lower popularity points
+compared to a pop song.
+
+``` r
+#fit the mlr model
+lm_spec <- linear_reg() %>%
+set_mode("regression") %>%
+set_engine("lm")
+
+int_mod <- lm_spec %>% 
+fit(pop ~ dB * rock, data = music_dom)
+
+tidy(int_mod)
+```
+
+    ## # A tibble: 4 × 5
+    ##   term        estimate std.error statistic   p.value
+    ##   <chr>          <dbl>     <dbl>     <dbl>     <dbl>
+    ## 1 (Intercept)    75.9      1.45      52.2  1.21e-217
+    ## 2 dB              1.67     0.160     10.4  2.04e- 23
+    ## 3 rock           -5.50     3.20      -1.72 8.59e-  2
+    ## 4 dB:rock        -1.23     0.339     -3.62 3.16e-  4
+
+![
+\\hat{y} = 75.914 + 1.671 \\times dB  -5.499 \\times rock - 1.228 \\times rock \\times dB
+](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;%0A%5Chat%7By%7D%20%3D%2075.914%20%2B%201.671%20%5Ctimes%20dB%20%20-5.499%20%5Ctimes%20rock%20-%201.228%20%5Ctimes%20rock%20%5Ctimes%20dB%0A "
+\hat{y} = 75.914 + 1.671 \times dB  -5.499 \times rock - 1.228 \times rock \times dB
 ")
